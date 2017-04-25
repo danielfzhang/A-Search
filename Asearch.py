@@ -8,6 +8,7 @@ class Astar:
        self.cost=step_cost
        self.openlist = []
        self.closelist = blocks
+       self.findpath=False
        #calculate f() + g() + h()
        g=0
        h=abs(self.start[0]-self.end[0])+abs(self.start[1]-self.end[1])
@@ -18,7 +19,7 @@ class Astar:
        #min_point trace the point with minimal f()
        self.min_point=cur_point
 
-   def OpenAdd(self, pre_point, expanded_point):
+   def AddOpen(self, pre_point, expanded_point):
        #calculate f()=g()+h()
        g=pre_point[1]+self.cost
        h=abs(expanded_point[0]-self.end[0])+abs(expanded_point[1]-self.end[1])
@@ -34,65 +35,46 @@ class Astar:
        #if the expanded point is not in open list, add it
        self.openlist.append(cur_point)
 
-   def CloseAdd(self, blocks):
+   def AddClose(self, blocks):
        #add any block, which is not in close list, to close list
        for point in blocks:
            if point not in self.closelist:
                self.closelist.append(point)
 
-   def PointRemove(self, point):
+   def RemovePoint(self, point):
        #add the point to close list
-       self.CloseAdd([point[0]])
+       self.AddClose([point[0]])
        #remove the point from open list
        self.openlist.remove(point)
-       # if openlist is empty return "openlist empty"
-       if self.openlist==[]:
-           return "openlist empty"
-       else:
+       #if there is element in the list
+       if self.openlist!=[]:
            #update min_point
-           self.min_point=[[0,0]]+[0]+[0]+[3*self.size]
+           self.min_point=[[0,0]]+[0]+[3*self.size]+[3*self.size]
            for each_point in self.openlist:
-               if each_point[3]<self.min_point[3]:
+               if each_point[2]<=self.min_point[2] and each_point[3]<=self.min_point[3]:
                    self.min_point=each_point
 
    #only do search once, and return the point searched
    def oneSearch(self):
-       if self.openlist==[]:
-           return "openlist empty"
+       if self.findpath:
+           return "find path"
+       elif self.openlist==[]:
+           return "no path"
        else:
-           #add available points to open list
-           #up
-           if self.min_point[0][1]-1>=0:
-               point=[self.min_point[0][0],self.min_point[0][1]-1]
-               if point not in self.closelist:
-                   if point==self.end:
-                       return "find path"
-                   else:
-                       self.OpenAdd(self.min_point, point)
-           #down
-           if self.min_point[0][1]+1<self.size:
-               point=[self.min_point[0][0],self.min_point[0][1]+1]
-               if point not in self.closelist:
-                   if point==self.end:
-                       return "find path"
-                   else:
-                       self.OpenAdd(self.min_point, point)
-           #left
-           if self.min_point[0][0]-1>=0:
-               point=[self.min_point[0][0]-1,self.min_point[0][1]]
-               if point not in self.closelist:
-                   if point==self.end:
-                       return "find path"
-                   else:
-                       self.OpenAdd(self.min_point, point)
-           #right
-           if self.min_point[0][0]+1<self.size:
-               point=[self.min_point[0][0]+1,self.min_point[0][1]]
-               if point not in self.closelist:
-                   if point==self.end:
-                       return "find path"
-                   else:
-                       self.OpenAdd(self.min_point, point)
+           if self.min_point[0]==self.end:
+               self.findpath=True
+               return self.min_point[0]
+           else:
+               expanded_point=self.min_point[0]
+           direct4=[[0,-1],[0,1],[-1,0],[1,0]]#up,down,left,right
+           #add available points to open list,up,down,left,right
+           for direction in direct4:
+               point_x=self.min_point[0][0]+direction[0]
+               point_y=self.min_point[0][1]+direction[1]
+               if point_x>=0 and point_x<self.size and point_y>=0 and point_y<self.size:
+                   point=[point_x,point_y]
+                   if point not in self.closelist:
+                       self.AddOpen(self.min_point, point)
            #remove the point
-           self.PointRemove(self.min_point)
-           return self.min_point[0]
+           self.RemovePoint(self.min_point)
+           return expanded_point
