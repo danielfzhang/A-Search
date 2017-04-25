@@ -96,21 +96,3 @@ class Astar:
            #remove the point
            self.PointRemove(self.min_point)
            return self.min_point[0]
-
-start=[0,0]
-end=[20,20]
-blocks1=[]
-s=Astar(start,end,blocks1,30,1)
-print("close list:", end="")
-print(s.closelist)
-print("open list:", end="")
-print(s.openlist)
-print("min point:", end="")
-print(s.min_point)
-print("---------------------")
-
-while True:
-    result=s.oneSearch()
-    print(result)
-    if result=="find path" or result=="openlist empty":
-        break
