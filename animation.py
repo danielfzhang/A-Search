@@ -6,25 +6,25 @@ from pygame.locals import *
 from sys import exit
 import time
 #searching parameters
-zoomin=5
+zoomin=6
 win_size=120
 start=[10,10]
 end=[100,100]
 blocks=[]
 step_cost=1
-delay=0.02
+delay=0.01
 #color definition
 WHITE=[255,255,255]
-BROWN=[238,59,59]
 RED=[255,0,0]
 BLACK=[0,0,0]
-SEAGREEN=[32,178,170]
+BLUE=[141,182,205]
+GREEN=[0,255,127]
 #pygame initialization
 pygame.init()
 screen = pygame.display.set_mode((win_size*zoomin, win_size*zoomin), 0, 32)
 screen.fill(WHITE)
-pygame.draw.rect(screen,BLACK, (start[0]*zoomin, start[1]*zoomin,zoomin,zoomin))
-pygame.draw.rect(screen,BLACK, (end[0]*zoomin, end[1]*zoomin,zoomin,zoomin))
+pygame.draw.rect(screen, RED, (start[0]*zoomin, start[1]*zoomin,zoomin,zoomin))
+pygame.draw.rect(screen, RED, (end[0]*zoomin, end[1]*zoomin,zoomin,zoomin))
 pygame.display.set_caption("Find a path")
 pygame.display.update()
 #flags
@@ -49,17 +49,25 @@ while True:
             while True:
                 result=Asearch.oneSearch()
                 if result!="find path" and result!="no path":
-                    pygame.draw.rect(screen, BROWN, (result[0]*zoomin, result[1]*zoomin,zoomin,zoomin))
+                    cir_x=math.ceil(result[0]*zoomin+zoomin/2-1)
+                    cir_y=math.ceil(result[1]*zoomin+zoomin/2-1)
+                    pygame.draw.circle(screen, BLUE, (cir_x, cir_y), math.ceil(zoomin/2))
                     pygame.display.update()
                     time.sleep(delay)
                 else:
                     DoSearch=True
+                    for p in Asearch.shortestPath:
+                        cir_x=math.ceil(p[0]*zoomin+zoomin/2-1)
+                        cir_y=math.ceil(p[1]*zoomin+zoomin/2-1)
+                        pygame.draw.circle(screen, GREEN, (cir_x, cir_y),math.ceil(zoomin/2))
+                        pygame.display.update()
+                        time.sleep(delay/2)
                     break
         elif buttondown:
             x, y = pygame.mouse.get_pos()
-            x=math.ceil(x/5)
-            y=math.ceil(y/5)
+            x=math.ceil(x/zoomin)
+            y=math.ceil(y/zoomin)
             if [x,y] not in blocks:
                 blocks.append([x,y])
-            pygame.draw.rect(screen, SEAGREEN, (x*zoomin, y*zoomin,zoomin,zoomin))
+            pygame.draw.rect(screen, BLACK, (x*zoomin, y*zoomin,zoomin,zoomin))
             pygame.display.update()
