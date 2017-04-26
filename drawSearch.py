@@ -7,9 +7,9 @@ from sys import exit
 import time
 #searching parameters
 zoomin=6
-win_size=120
+win_size=50
 start=[10,10]
-end=[100,100]
+end=[45,45]
 blocks=[]
 step_cost=1
 delay=0.01
