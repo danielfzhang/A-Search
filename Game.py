@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from asearch import Astar
+from astar import Astar
 from analyzemaze import *
 import pygame
 import math
