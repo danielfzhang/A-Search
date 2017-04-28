@@ -5,17 +5,16 @@ import pygame
 import math
 from pygame.locals import *
 from sys import exit
-import time
 #parameter definition
 WHITE=[255,255,255]
 RED=[255,0,0]
 BLACK=[0,0,0]
 BLUE=[141,182,205]
-GREEN=[0,255,127]
-Enlarge=6
-delay=0.01
+Enlarge=4
 #analyze maze
-MazeSize,Start,End,BlockList=analyzeMaze('maze/2.PNG')
+file= input("enter the file name of maze in folder maze:")
+file="maze/"+file
+MazeSize,Start,End,BlockList=analyzeMaze(file)
 #pygame initialization
 pygame.init()
 screen = pygame.display.set_mode((MazeSize[0]*Enlarge, MazeSize[1]*Enlarge), 0, 32)
@@ -53,15 +52,13 @@ while True:
                     cir_y=math.floor(result[1]*Enlarge+Enlarge/2-1)
                     pygame.draw.circle(screen, BLUE, (cir_x, cir_y), math.floor(Enlarge/2))
                     pygame.display.update()
-                    time.sleep(delay)
                 else:
                     DoSearch=True
                     for p in Asearch.shortestPath:
                         cir_x=math.floor(p[0]*Enlarge+Enlarge/2-1)
                         cir_y=math.floor(p[1]*Enlarge+Enlarge/2-1)
-                        pygame.draw.circle(screen, GREEN, (cir_x, cir_y),math.floor(Enlarge/2))
+                        pygame.draw.circle(screen, RED, (cir_x, cir_y),math.floor(Enlarge/2))
                         pygame.display.update()
-                        time.sleep(delay/2)
                     break
         elif buttondown:
             x, y = pygame.mouse.get_pos()
