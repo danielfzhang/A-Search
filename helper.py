@@ -114,7 +114,7 @@ class Astar:
             #update min_point
             self.__minNode=[[0,0]]+[0]+[3*max(self.__size)]+[3*max(self.__size)]+[[-1,-1]]
             for node in self.__openlist:
-                if node[2:4]<=self.__minNode[2:4]:
+                if node[3]<self.__minNode[3]:
                     self.__minNode=node
 
     def __shortestPath(self):
