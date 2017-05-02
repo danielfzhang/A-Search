@@ -1,7 +1,6 @@
 #!/usr/bin/python3
-import cv2
 import numpy as np
-import math
+import math, cv2,sys
 def analyzeMaze(file):
     """Analyze an image of a Maze.
 
@@ -21,13 +20,11 @@ def analyzeMaze(file):
                 origin_Maze=[y,x]
                 findMaze=True
                 break
-        if findMaze:
-            break
+        if findMaze: break
     for i in range(origin_Maze[0],img.shape[0]):
         if (img[i][origin_Maze[1]]==WHITE).all():
             blk_size+=1
-        elif (pixel!=BLACK).all():
-            break
+        elif (pixel!=BLACK).all(): break
     #compute block list
     BlockList=[]
     for j in range(0,2):
@@ -40,10 +37,8 @@ def analyzeMaze(file):
     #we need to switch the x and y for Start,End,BlockList
     BlockList.sort()
     y=max(BlockList)[0]
-    for e in BlockList:
-        exch=e[0]
-        e[0]=e[1]
-        e[1]=exch
+    for i,e in enumerate(BlockList):
+        BlockList[i]=[e[1],e[0]]
     x=max(BlockList)[0]
     MazeSize=[x+1,y+1]
     #find Start and End point
@@ -64,18 +59,18 @@ class Astar:
     Perform A* algorithm to find the shortest path.
 
     find the shortest path from __start point to __end point
-    blockPoints are the points that cannot be positioned
+    blockSet are the points that cannot be positioned
     size is the window size"""
-    def __init__(self, startPoint, endPoint, blockPoints, size, step_cost=1):
+    def __init__(self, startPoint, endPoint, blockList, size):
         #parameters initialization
-        self.__start=startPoint
-        self.__end=endPoint
-        self.__closelist = blockPoints[:]
-        self.__size=size#window size
-        self.__cost=step_cost
+        self.__start=startPoint[:]
+        self.__end=endPoint[:]
+        self.__closelist = blockList[:]
+        self.__size=size[:]#window size
         self.__openlist = []
-        self.__findpath=False
         self.shortestPath=[]
+        self.__cost=1
+        self.__findpath=False
         #calculate f() + g() + h()
         #g() is the cost of the path from the __start node to n
         #h() is a heuristic that estimates the cost of the cheapest path from n to the goal
@@ -97,12 +92,11 @@ class Astar:
         #if the expanded point is in open list, do not add the point to open list
         #if the cost of expanded point is less than the point in open list, replace it.
         for node in self.__openlist:
-            if cur_node[0]==node[0]:
-                if cur_node[3]<node[3]:
-                    node=cur_node
+            if cur_node[0]==node[0] and cur_node[3]<node[3]:
+                node=cur_node
                 return
         #if the expanded point is not in open list, add it
-        self.__openlist.append(cur_node)
+        else: self.__openlist.append(cur_node)
 
     def __RemoveMin(self):
         #add the point to close list
@@ -112,7 +106,7 @@ class Astar:
         #if there is element in the list
         if self.__openlist!=[]:
             #update min_point
-            self.__minNode=[[0,0]]+[0]+[3*max(self.__size)]+[3*max(self.__size)]+[[-1,-1]]
+            self.__minNode=[[0,0]]+[0]+[sys.maxsize]+[sys.maxsize]+[[-1,-1]]
             for node in self.__openlist:
                 if node[3]<self.__minNode[3]:
                     self.__minNode=node
@@ -128,16 +122,15 @@ class Astar:
             cur_index-=1
 
     #only do search once, and return the point searched
-    def oneSearch(self):
-        if self.__findpath:
-            return "find path"
-        elif self.__openlist==[]:
-            return "no path"
-        else:
-            expanded_point=self.__minNode[0][:]
-            if expanded_point==self.__end:
-                self.__findpath=True
-            else:
+    def nextStep(self):
+        while True:
+            if self.__minNode[0]==self.__end:
+                self.__RemoveMin()#remove the node
+                self.__shortestPath()
+                if len(self.shortestPath)==1:
+                    return self.__end
+                else: return self.shortestPath[1]
+            elif self.__openlist!=[]:
                 direct4=[[0,-1],[0,1],[-1,0],[1,0]]#up,down,left,right
                 #add available points to open list,up,down,left,right
                 for direction in direct4:
@@ -146,17 +139,13 @@ class Astar:
                     #the point is within the window
                     if 0<=point_x<self.__size[0] and 0<=point_y<self.__size[1]:
                         point=[point_x,point_y]
-                        duplicated=False
                         for node in self.__closelist:
-                            if point==node[0] or point==node:
-                                duplicated=True
-                                break
-                        #if the point is not in close list
-                        if not duplicated:
-                           self.__AddOpen(point)
-            #remove the node
-            self.__RemoveMin()
-            #find the shortest path, store it in the list
-            if self.__findpath:
-                self.__shortestPath()
-            return expanded_point
+                            if point==node[0] or point==node: break
+                        else: self.__AddOpen(point)#the point is not in close list
+                self.__RemoveMin()#remove the node
+            else: return
+#testing
+"""
+size,s,e,blk=analyzeMaze('img/maze1.PNG')
+A=Astar(s,e,blk,size)
+print(A.nextStep())"""

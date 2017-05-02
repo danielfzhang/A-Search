@@ -4,13 +4,14 @@ from pygame.locals import *
 from sys import exit
 import pygame, os, threading, random
 #parameters
-MBsize=78
+MBsize=70
+MBnum=12
 miniMapSize=3
-windowSize=(1300, MBsize*11)
-moveSpeed=0
+windowSize=(1300, MBsize*MBnum)
+moveSpeed=50
 Shifting=[30,0]
-Grey=[105,105,105]
 #colors
+Grey=[105,105,105]
 White=[255,255,255]
 Black=[0,0,0]
 Red=[255,0,0]
@@ -26,13 +27,16 @@ Monster=pygame.image.load('img/monster.PNG').convert_alpha()
 Monster = pygame.transform.scale(Monster, (MBsize, MBsize))
 monsterPos=End[:]
 #functions-----------
-def updateMap():#draw Map
+def updateMap():
+    #draw Map
     screen.fill(White)
-    for x in range(-5,6):
-        for y in range(-5,6):
+    lowbound=MBnum//2*-1
+    uppbound=(MBnum+1)//2
+    for x in range(lowbound,uppbound):
+        for y in range(lowbound,uppbound):
             if [monsterPos[0]+x,monsterPos[1]+y] in blockList:
-                pygame.draw.rect(screen,Black,[(x+5)*MBsize+Shifting[0],(y+5)*MBsize+Shifting[1],MBsize,MBsize])
-    else: screen.blit(Monster, [5*MBsize+Shifting[0],5*MBsize+Shifting[1]])
+                pygame.draw.rect(screen,Black,[(x+MBnum//2)*MBsize+Shifting[0],(y+MBnum//2)*MBsize+Shifting[1],MBsize,MBsize])
+    else: screen.blit(Monster, [MBnum//2*MBsize+Shifting[0],MBnum//2*MBsize+Shifting[1]])
     #draw minimap
     pygame.draw.rect(screen,White,Shifting+[mazeSize[0]*miniMapSize,mazeSize[1]*miniMapSize])
     for pixel in blockList:
@@ -42,20 +46,35 @@ def updateMap():#draw Map
     pygame.draw.rect(screen,Red,[p[0]*miniMapSize+p[1] for p in zip(monsterPos,Shifting)]+[miniMapSize,miniMapSize])
     pygame.display.update()
 updateMap()
-def toDestn(destination):#move to destination
+#move to destination
+def toDestn(destination):
     global autoMove, monsterPos
-    while monsterPos!=destination:
-        if not autoMove: return#interrupted
+    preStep=[[],[]]#track last two steps
+    while autoMove:
         Asearch=Astar(monsterPos,destination,blockList,mazeSize)
-        result=Asearch.oneSearch()
-        while result!="find path" and result!="no path":
-            result=Asearch.oneSearch()
-        if result=="find path":
-            if len(Asearch.shortestPath)>1:
-                if not autoMove: return#interrupted
-                monsterPos=Asearch.shortestPath[1]
-                pygame.time.delay(moveSpeed)
-    autoMove=False
+        nextStp=Asearch.nextStep()
+        deadlck=preStep.pop(0)
+        if deadlck==nextStp:#detect dead lock
+            randmove=[]
+            direct4=[[0,-1],[0,1],[-1,0],[1,0]]#up,down,left,right
+            #add available points to randmove
+            for direction in direct4:
+                point_x=monsterPos[0]+direction[0]
+                point_y=monsterPos[1]+direction[1]
+                #the point is within the window
+                if 0<=point_x<mazeSize[0] and 0<=point_y<mazeSize[1]:
+                    point=[point_x,point_y]
+                    if point not in blockList and point!=deadlck:
+                        randmove.append(point)
+            nextStp=random.choice(randmove)
+            preStep=[[],[]]
+        else: preStep.append(nextStp)
+        if not autoMove: return#interrupted
+        if nextStp==None: pass
+        else:
+            monsterPos=nextStp#move
+            pygame.time.delay(moveSpeed)
+            if nextStp==destination: autoMove=False#reach destination
 #flags
 drawBLK=False
 drawWHT=False
@@ -95,14 +114,14 @@ while True:
                         if monsterPos[0]>0: monsterPos[0]-=1
     if drawBLK:#left click set blocks
         x, y = pygame.mouse.get_pos()
-        x=(x-Shifting[0])//MBsize-5+monsterPos[0]
-        y=(y-Shifting[1])//MBsize-5+monsterPos[1]
+        x=(x-Shifting[0])//MBsize-MBnum//2+monsterPos[0]
+        y=(y-Shifting[1])//MBsize-MBnum//2+monsterPos[1]
         if 0<x<mazeSize[0]-1 and 0<y<mazeSize[1]-1:
             if [x,y] not in blockList: blockList.append([x,y])
     elif drawWHT:#right click remove blocks
         x, y = pygame.mouse.get_pos()
-        x=(x-Shifting[0])//MBsize-5+monsterPos[0]
-        y=(y-Shifting[1])//MBsize-5+monsterPos[1]
+        x=(x-Shifting[0])//MBsize-MBnum//2+monsterPos[0]
+        y=(y-Shifting[1])//MBsize-MBnum//2+monsterPos[1]
         if 0<x<mazeSize[0]-1 and 0<y<mazeSize[1]-1:
             if [x,y] in blockList: blockList.remove([x,y])
     updateMap()
