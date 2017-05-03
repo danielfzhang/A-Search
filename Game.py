@@ -3,6 +3,7 @@ from helper import *
 from pygame.locals import *
 from sys import exit
 import pygame, os, threading, random, math
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
 #colors
 Grey=[105,105,105]
 White=[255,255,255]
@@ -10,35 +11,41 @@ Black=[0,0,0]
 Red=[255,0,0]
 Green=[0,255,0]
 #load,analyze images
+Shifting=[0,0]
+MBsize=60
+MBnum=[24,14]
+miniMapSize=5
+monsterSpeed=100
+windowSize=(Shifting[0]+MBsize*MBnum[0], MBsize*MBnum[1])
+pygame.init()
+screen = pygame.display.set_mode(windowSize, 0, 32)
 filename=random.randint(1, 4)
 filename='img/maze' + str(filename)+'.PNG'
 mazeSize,Start,End,blockList=analyzeMaze(filename)
 #window set up
 monsterPos=[-1,-1]
-viewPoint=[0,mazeSize[1]//2]
-Shifting=[0,0]
-MBsize=50
-MBnum=[24,14]
-miniMapSize=5
-monsterSpeed=100
-os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
-windowSize=(Shifting[0]+MBsize*MBnum[0], MBsize*MBnum[1])
-pygame.init()
-screen = pygame.display.set_mode(windowSize, 0, 32)
+viewPoint=[Shifting[0]+MBnum[0]//2,mazeSize[1]//2]
+clock = pygame.time.Clock()
 pygame.display.set_caption("Maze Defense")
 Monster=pygame.image.load('img/monster.PNG').convert_alpha()
 Monster = pygame.transform.scale(Monster, (MBsize, MBsize))
+Stone=pygame.image.load('img/stone.PNG')
+Stone= pygame.transform.scale(Stone, (MBsize, MBsize))
+Land=pygame.image.load('img/land.PNG')
+Land= pygame.transform.scale(Land, (MBsize, MBsize))
 #(functions-----------
 def updateMap():
     global viewPoint
     screen.fill(White)
     for x in range(MBnum[0]//2*-1,MBnum[0]//2):#draw rows
         for y in range(MBnum[1]//2*-1,MBnum[1]//2):#draw cols
-            if [viewPoint[0]+x,viewPoint[1]+y] in blockList:#draw blocks
-                pygame.draw.rect(screen,Black,[(x+MBnum[0]//2)*MBsize+Shifting[0],(y+MBnum[1]//2)*MBsize+Shifting[1],MBsize,MBsize])
-            elif [viewPoint[0]+x,viewPoint[1]+y]==monsterPos:#draw monster
-                if monsterPos!=[-1,-1]:
-                    screen.blit(Monster, [(x+MBnum[0]//2)*MBsize+Shifting[0],(y+MBnum[1]//2)*MBsize+Shifting[1]])
+            if 0<=viewPoint[0]+x<mazeSize[0] and 0<=viewPoint[1]+y<mazeSize[1]:
+                if [viewPoint[0]+x,viewPoint[1]+y] in blockList:
+                    screen.blit(Stone, [(x+MBnum[0]//2)*MBsize+Shifting[0],(y+MBnum[1]//2)*MBsize+Shifting[1]])
+                else: screen.blit(Land, [(x+MBnum[0]//2)*MBsize+Shifting[0],(y+MBnum[1]//2)*MBsize+Shifting[1]])
+                if [viewPoint[0]+x,viewPoint[1]+y]==monsterPos:#draw monster
+                    if monsterPos!=[-1,-1]:
+                        screen.blit(Monster, [(x+MBnum[0]//2)*MBsize+Shifting[0],(y+MBnum[1]//2)*MBsize+Shifting[1]])
     #draw minimap
     pygame.draw.rect(screen,White,Shifting+[mazeSize[0]*miniMapSize,mazeSize[1]*miniMapSize])
     for pixel in blockList:
@@ -49,6 +56,7 @@ def updateMap():
     miniWin=[viewPoint[0]-MBnum[0]//2,viewPoint[1]-MBnum[1]//2]
     pygame.draw.rect(screen,Red,[p[0]*miniMapSize+p[1] for p in zip(miniWin,Shifting)]+[MBnum[0]*miniMapSize,MBnum[1]*miniMapSize],2)
     pygame.display.flip()
+    clock.tick(30)
 def geneMonster(destination):
     global monsterPos, monsterMove
     monsterPos=End[:]
@@ -88,7 +96,6 @@ monsterMove=False
 leftClick=False
 rightClick=False
 #pygame main loop
-clock = pygame.time.Clock()
 while True:
     for event in pygame.event.get():#detect keyboard, mouse inputs
         if event.type == QUIT: exit()
@@ -97,10 +104,21 @@ while True:
     if pressed_mouse[0] or pressed_mouse[2]:
         x, y = pygame.mouse.get_pos()
         #click minimap to move map
-        if Shifting[0]<=x<miniMapSize*mazeSize[0] and Shifting[1]<=y<miniMapSize*mazeSize[1]:
+        if Shifting[0]<=x<Shifting[0]+miniMapSize*mazeSize[0] and Shifting[1]<=y<Shifting[1]+miniMapSize*mazeSize[1]:
             if pressed_mouse[0]:
-                x=(x-Shifting[0])//miniMapSize
-                y=(y-Shifting[1])//miniMapSize
+                if x<Shifting[0]+MBnum[0]//2*miniMapSize:
+                    x=Shifting[0]+MBnum[0]//2
+                elif x>=Shifting[0]+(mazeSize[0]-MBnum[0]//2)*miniMapSize:
+                    x=Shifting[0]+mazeSize[0]-MBnum[0]//2
+                else:
+                    x=(x-Shifting[0])//miniMapSize
+
+                if y<Shifting[1]+MBnum[1]//2*miniMapSize:
+                    y=Shifting[1]+MBnum[1]//2
+                elif y>=Shifting[1]+(mazeSize[1]-MBnum[1]//2)*miniMapSize:
+                    y=Shifting[1]+mazeSize[1]-MBnum[1]//2
+                else:
+                    y=(y-Shifting[1])//miniMapSize
                 viewPoint=[x,y]
         else:
             if pressed_mouse[0]:#click left mouse button to set block
@@ -133,4 +151,3 @@ while True:
         if viewPoint[0]>Shifting[0]: viewPoint[0]-=1
     #------------)
     updateMap()
-    clock.tick(60)
