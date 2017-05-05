@@ -2,7 +2,7 @@
 from helper import *
 from pygame.locals import *
 from sys import exit
-import pygame, os, threading, random, math, time
+import pygame, os, threading, random, time
 #set window to most left top on the screen
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
 #colors
@@ -19,6 +19,8 @@ mazeSize,Start,End,blockList=analyzeMaze(filename)
 #parameters of map
 MBsize=60
 MBnum=[20,14]
+if mazeSize[0]<MBnum[0]: MBnum[0]=mazeSize[0]
+if mazeSize[1]<MBnum[1]: MBnum[1]=mazeSize[1]
 miniMapSize=4
 windowSize=(MBsize*MBnum[0], MBsize*MBnum[1])
 viewPoint=[MBnum[0]//2,mazeSize[1]//2]
@@ -161,17 +163,17 @@ def updateMap():
 
 def makeZombie(destination,count):
     global blockNum, zombiePath, zombieLife, zombiePos, explode, chiliList
-    print('zombie '+str(count))
-    zombiePos=End[:]
     if blockNum!=len(blockList):#calculate shortestPath again if walls# change
         blockNum=len(blockList)
-        Asearch=Astar(zombiePos,destination,blockList,mazeSize)
+        Asearch=Astar(End,destination,blockList,mazeSize)
+        print('*zombie is finding a new path')
         Asearch.nextStep()
         zombiePath=Asearch.shortestPath
-        print(' zombie found a new path')
     moveSpeed=700
-    eatSpeed=2000
+    eatSpeed=1900
     zombieLife=3
+    zombiePos=End[:]
+    print('zombie '+str(count))
     for nextStp in zombiePath:
         if zombieLife<1:
             break#zombie is killed
@@ -186,7 +188,7 @@ def makeZombie(destination,count):
         zombiePos=nextStp#move
         pygame.time.delay(moveSpeed)
     if explode:#explode
-        pygame.time.delay(300)#explode animation time
+        pygame.time.delay(200)#explode animation time
         explode=False
         for x in range(-1,2):
             for y in range(-1,2):
@@ -201,7 +203,8 @@ def makeZombie(destination,count):
 
 def makeChili():
     global zombieLife,shovelNum,chiliNum, explode
-    attackSpeed=2#second
+    attackSpeed=1.8#second
+    firetime=0.3
     damage=1
     while chiliList!=[]:#chili is alive
         for cc in chiliList:
@@ -216,7 +219,7 @@ def makeChili():
                         cc[2]=time.time()#set up timer
                         cc[3]='attacking'
             elif cc[3]=='attacking':
-                if time.time()-cc[2]>=0.3:
+                if time.time()-cc[2]>=firetime:
                     zombieLife-=damage
                     if zombieLife==0:
                         if random.randint(1, 3)==1:#reward
