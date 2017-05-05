@@ -17,8 +17,8 @@ filename=random.randint(1, 4)
 filename='img/maze' + str(filename)+'.PNG'
 mazeSize,Start,End,blockList=analyzeMaze(filename)
 #parameters of map
-MBsize=70
-MBnum=[24,14]
+MBsize=60
+MBnum=[20,14]
 miniMapSize=4
 windowSize=(MBsize*MBnum[0], MBsize*MBnum[1])
 viewPoint=[MBnum[0]//2,mazeSize[1]//2]
@@ -40,6 +40,14 @@ Brick=pygame.image.load('img/brick.PNG')
 Attack=pygame.image.load('img/attack.PNG')
 Damaged=pygame.image.load('img/damaged.PNG')
 Bomb=pygame.image.load('img/bomb.PNG')
+Win=[]
+WinNum=92
+winCount=0
+for i in range(0,WinNum):
+    if i <10:
+        framei = pygame.image.load('img/win/win0'+str(i)+'.png')
+    else: framei = pygame.image.load('img/win/win'+str(i)+'.png')
+    Win.append(framei)
 #resize images
 Zombie = pygame.transform.scale(Zombie, (MBsize, MBsize))
 Wall= pygame.transform.scale(Wall, (MBsize, MBsize))
@@ -57,7 +65,7 @@ chiliList=[]
 attackList=[]
 blockNum=0
 chiliNum=2
-shovelNum=50
+shovelNum=2
 brickNum=0
 zombieLife=0
 zombiePath=[]
@@ -69,17 +77,17 @@ chestPos=random.choice(blockList)
 while (chestPos[0]==0 or chestPos[1]==0 or
     chestPos[0]==mazeSize[0]-1 or chestPos[1]==mazeSize[1]-1):
     chestPos=random.choice(blockList)
-print(chestPos)#cheating!!!!!!!!
+print('chest is on '+str(chestPos))#cheating!!!!!!!!
 #flags
 bagOpen=False
 chiliUse=False
 shovelUse=False
 brickUse=False
 explode=False
-zombieExit=False
+findChest=False
 #(functions-----------
 def updateMap():
-    global blockList, zombieLife
+    global blockList, zombieLife, winCount,findChest
     bomX,bomY=[[],[]]
     for x in range(MBnum[0]//2*-1,MBnum[0]//2):# rows
         for y in range(MBnum[1]//2*-1,MBnum[1]//2):# cols
@@ -97,17 +105,18 @@ def updateMap():
                 elif [viewPoint[0]+x,viewPoint[1]+y]==zombiePos and explode:#zombie dies and explode
                     bomX=(x+MBnum[0]//2-1)*MBsize
                     bomY=(y+MBnum[1]//2-1)*MBsize
-                elif [viewPoint[0]+x,viewPoint[1]+y]==chestPos:#find chest game over
+                elif [viewPoint[0]+x,viewPoint[1]+y]==chestPos:#find chest,fire work
                     screen.blit(Chest, [(x+MBnum[0]//2)*MBsize,(y+MBnum[1]//2)*MBsize])
-                    pygame.display.update()
-                    pygame.time.delay(5000)
-                    blockList=[]
-                    zombieLife=0
-                    exit()
+                    if not findChest:
+                        findChest=True
+                        pygame.display.update()
                 else:
                     screen.blit(Road, [(x+MBnum[0]//2)*MBsize,(y+MBnum[1]//2)*MBsize])# road
     if explode and [bomX,bomY]!=[[],[]]:
         screen.blit(Bomb, [bomX,bomY])
+    if findChest:#fire work
+        screen.blit(Win[winCount%WinNum], (MBsize*MBnum[0]//2-250, MBsize*MBnum[1]//2-250))
+        winCount+=1
     #draw bag
     if bagOpen:
         #bag and items
@@ -145,25 +154,28 @@ def updateMap():
         pygame.draw.rect(screen,Red,[p*miniMapSize for p in zombiePos+[1,1]])
     miniWindow=[viewPoint[0]-MBnum[0]//2,viewPoint[1]-MBnum[1]//2]
     pygame.draw.rect(screen,Red,[p*miniMapSize for p in miniWindow+MBnum],2)
+
     #update screen
     pygame.display.update()
     clock.tick(60)
 
-def makeZombie(destination):
+def makeZombie(destination,count):
     global blockNum, zombiePath, zombieLife, zombiePos, explode, chiliList
+    print('zombie '+str(count))
     zombiePos=End[:]
     if blockNum!=len(blockList):#calculate shortestPath again if walls# change
         blockNum=len(blockList)
         Asearch=Astar(zombiePos,destination,blockList,mazeSize)
         Asearch.nextStep()
         zombiePath=Asearch.shortestPath
+        print(' zombie found a new path')
     moveSpeed=700
     eatSpeed=2000
     zombieLife=3
     for nextStp in zombiePath:
         if zombieLife<1:
             break#zombie is killed
-        elif nextStp in [p[0:2] for p in chiliList]:
+        elif nextStp in [p[0:2] for p in chiliList]:#chili blocks,eat it
             pygame.time.delay(eatSpeed)
             if zombieLife<1:
                 break#zombie is killed
@@ -185,8 +197,7 @@ def makeZombie(destination):
                         for p in chiliList:
                             if [x+zombiePos[0],y+zombiePos[1]]==p[0:2]:
                                 p[4]='die'
-    if not zombieExit:
-        makeZombie(destination)#new zombie
+    makeZombie(destination,count+1)#new zombie
 
 def makeChili():
     global zombieLife,shovelNum,chiliNum, explode
@@ -195,11 +206,10 @@ def makeChili():
     while chiliList!=[]:#chili is alive
         for cc in chiliList:
             if cc[4]=='die':
-                if cc in attackList:
-                    attackList.remove(cc)
+                if cc in attackList: attackList.remove(cc)
                 chiliList.remove(cc)
                 continue
-            if cc[3]=='none'and zombieLife>0:
+            elif cc[3]=='none'and zombieLife>0:
                 for i in range(-2,3):#zombie is alve and within attack range
                     if [cc[0]+i,cc[1]]==zombiePos or [cc[0],cc[1]+i]==zombiePos:
                         attackList.append(cc)
@@ -217,79 +227,83 @@ def makeChili():
                     attackList.remove(cc)
                     cc[3]='cooldown'
             elif cc[3]=='cooldown':
-                if time.time()-cc[2]>=attackSpeed:
-                    cc[3]='none'
-
+                if time.time()-cc[2]>=attackSpeed: cc[3]='none'
 #-------------functions)
-updateMap()
+updateMap()#draw map
 #start zombie thread
-monsterThread=threading.Thread( target=makeZombie, args=(Start,) )
+monsterThread=threading.Thread( target=makeZombie, args=(Start,1) )
 monsterThread.setDaemon(True)
 monsterThread.start()
 #pygame main loop
 while True:
     for event in pygame.event.get():
         if event.type == QUIT:#quite all threading and exit
-            zombieExit=True
-            chiliList==[]
             exit()
-        #press key
-        elif event.type == KEYDOWN:
+        elif event.type == KEYDOWN:#press key
             if event.key == K_q:#bag
-                if not bagOpen:
-                    bagOpen=True
-                    chiliUse=shovelUse=brickUse=False
-                    pygame.mouse.set_visible(True)
-                else:
-                    chiliUse=shovelUse=brickUse=False
-                    pygame.mouse.set_visible(True)
+                if bagOpen:
                     bagOpen=False
-        #press mouse
-        elif event.type == MOUSEBUTTONDOWN:
+                else: bagOpen=True
+                chiliUse=shovelUse=brickUse=False
+                pygame.mouse.set_visible(True)
+        elif event.type == MOUSEBUTTONDOWN:#press mouse
             pressed_mouse = pygame.mouse.get_pressed()
-            x, y = pygame.mouse.get_pos()
+            x, y = pygame.mouse.get_pos()#get position of mouse
             if shovelUse or brickUse or chiliUse:#use items
                 if pressed_mouse[0]:
                     x=(x)//MBsize-MBnum[0]//2+viewPoint[0]
                     y=(y)//MBsize-MBnum[1]//2+viewPoint[1]
                     if 0<x<mazeSize[0]-1 and 0<y<mazeSize[1]-1:
-                        if shovelUse:#remove block
+                        if shovelUse:#use shove to remove block
                             if [x,y] in blockList:
-                                shovelNum-=1
                                 blockList.remove([x,y])
                             elif [x,y] in [p[0:2] for p in chiliList]:
-                                shovelNum-=1
                                 for p in chiliList:
                                     if [x,y]==p[0:2]:
                                         p[4]='die'
-                        elif brickUse:#set block
+                            else: break
+                            shovelNum-=1
+                            if shovelNum==0:
+                                shovelUse=False
+                                pygame.mouse.set_visible(True)
+                        elif brickUse:#use brick to set block
                             if [x,y] not in blockList:
                                 blockList.append([x,y])
                                 brickNum-=1
+                                if brickNum==0:
+                                    brickUse=False
+                                    pygame.mouse.set_visible(True)
                         else:#use chili
-                            chiliNum-=1
-                            if chiliList==[]:
-                                chiliList.append([x,y,0,'none','alive'])
-                                chiliThread=threading.Thread(target=makeChili)
-                                chiliThread.setDaemon(True)
-                                chiliThread.start()
-                            else: chiliList.append([x,y,0,'none','alive'])
-                chiliUse=shovelUse=brickUse=False
-                pygame.mouse.set_visible(True)
+                            if [x,y] not in blockList and [x,y] not in [p[0:2] for p in chiliList]:
+                                if chiliList==[]:
+                                    chiliList.append([x,y,0,'none','alive'])
+                                    chiliThread=threading.Thread(target=makeChili)
+                                    chiliThread.setDaemon(True)
+                                    chiliThread.start()
+                                else: chiliList.append([x,y,0,'none','alive'])
+                                chiliNum-=1
+                                if chiliNum==0:
+                                    chiliUse=False
+                                    pygame.mouse.set_visible(True)
+                elif pressed_mouse[1]: break #middle mouse button not in use
+                else:
+                    chiliUse=shovelUse=brickUse=False
+                    pygame.mouse.set_visible(True)
             elif bagOpen:#select items
                 if pressed_mouse[0]:
-                    if bagPos[0]<=x<bagPos[0]+bagSize[0] and bagPos[1]<=y<bagPos[1]+MBsize:
-                        if chiliNum>0:
-                            chiliUse=True
-                            bagOpen=False
-                    elif bagPos[0]<=x<bagPos[0]+bagSize[0] and bagPos[1]+MBsize<=y<bagPos[1]+MBsize*2:
-                        if shovelNum>0:
-                            shovelUse=True
-                            bagOpen=False
-                    elif bagPos[0]<=x<bagPos[0]+bagSize[0] and bagPos[1]+MBsize*2<=y<bagPos[1]+MBsize*3:
-                        if brickNum>0:
-                            brickUse=True
-                            bagOpen=False
+                    if bagPos[0]<=x<bagPos[0]+bagSize[0] and bagPos[1]<=y<bagPos[1]+MBsize*3:#click on bag
+                        if y<bagPos[1]+MBsize:
+                            if chiliNum>0:
+                                chiliUse=True
+                                bagOpen=False
+                        elif y<bagPos[1]+MBsize*2:
+                            if shovelNum>0:
+                                shovelUse=True
+                                bagOpen=False
+                        elif y<bagPos[1]+MBsize*3:
+                            if brickNum>0:
+                                brickUse=True
+                                bagOpen=False
                 elif pressed_mouse[2]:
                     chiliUse=shovelUse=brickUse=False
                     pygame.mouse.set_visible(True)
@@ -303,14 +317,12 @@ while True:
                 x=MBnum[0]//2
             elif x>=(mazeSize[0]-MBnum[0]//2)*miniMapSize:
                 x=mazeSize[0]-MBnum[0]//2
-            else:
-                x=(x)//miniMapSize
+            else: x=(x)//miniMapSize
             if y<MBnum[1]//2*miniMapSize:
                 y=MBnum[1]//2
             elif y>=+(mazeSize[1]-MBnum[1]//2)*miniMapSize:
                 y=+mazeSize[1]-MBnum[1]//2
-            else:
-                y=(y)//miniMapSize
+            else: y=(y)//miniMapSize
             viewPoint=[x,y]
     #----------)
     #(key functions-------
@@ -323,7 +335,7 @@ while True:
         viewPoint[0]+=1
     elif pressed_key[pygame.K_a] and viewPoint[0]>MBnum[0]//2:
         viewPoint[0]-=1
-    elif pressed_key[pygame.K_e] and zombieLife>0:#view to zombie
+    elif pressed_key[pygame.K_SPACE] and zombieLife>0:#view to zombie
         x,y=zombiePos
         if x<MBnum[0]//2:
             x=MBnum[0]//2
