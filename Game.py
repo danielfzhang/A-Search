@@ -12,7 +12,7 @@ Red=[255,0,0]
 Green=[0,255,0]
 Turquoise=[0,245,255]
 #randomly load and analyze a maze image
-filename=random.randint(3, 3)
+filename=random.randint(1, 4)
 filename='img/maze' + str(filename)+'.PNG'
 mazeSize,Start,End,blockList=MazeAnalyse.analyzeMaze(filename)
 if type(mazeSize) is str:
