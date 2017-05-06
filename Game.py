@@ -1,8 +1,7 @@
 #!/usr/bin/python3
-from helper import *
 from pygame.locals import *
 from sys import exit
-import pygame, os, threading, random, time
+import pygame, os, threading, random, time, AStar, MazeAnalyse
 #set window to most left top on the screen
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,30)
 #colors
@@ -13,9 +12,12 @@ Red=[255,0,0]
 Green=[0,255,0]
 Turquoise=[0,245,255]
 #randomly load and analyze a maze image
-filename=random.randint(1, 4)
+filename=random.randint(3, 3)
 filename='img/maze' + str(filename)+'.PNG'
-mazeSize,Start,End,blockList=analyzeMaze(filename)
+mazeSize,Start,End,blockList=MazeAnalyse.analyzeMaze(filename)
+if type(mazeSize) is str:
+    print(mazeSize)
+    exit()
 #parameters of map
 MBsize=60
 MBnum=[20,14]
@@ -47,8 +49,8 @@ WinNum=92
 winCount=0
 for i in range(0,WinNum):
     if i <10:
-        framei = pygame.image.load('img/win/win0'+str(i)+'.png')
-    else: framei = pygame.image.load('img/win/win'+str(i)+'.png')
+        framei = pygame.image.load('img/firework/win0'+str(i)+'.png')
+    else: framei = pygame.image.load('img/firework/win'+str(i)+'.png')
     Win.append(framei)
 #resize images
 Zombie = pygame.transform.scale(Zombie, (MBsize, MBsize))
@@ -65,10 +67,9 @@ Bomb=pygame.transform.scale(Bomb, (MBsize*3, MBsize*3))
 #parameters of the game
 chiliList=[]
 attackList=[]
-blockNum=0
-chiliNum=2
-shovelNum=2
-brickNum=0
+chiliNum=5
+shovelNum=5
+brickNum=5
 zombieLife=0
 zombiePath=[]
 bagSize=[MBsize*2,MBsize*3]
@@ -79,14 +80,16 @@ chestPos=random.choice(blockList)
 while (chestPos[0]==0 or chestPos[1]==0 or
     chestPos[0]==mazeSize[0]-1 or chestPos[1]==mazeSize[1]-1):
     chestPos=random.choice(blockList)
-print('chest is on '+str(chestPos))#cheating!!!!!!!!
+#print('chest is on '+str(chestPos))#cheating!!!!!!!!
 #flags
+mapChanged=True
 bagOpen=False
 chiliUse=False
 shovelUse=False
 brickUse=False
 explode=False
 findChest=False
+loseGame=False
 #(functions-----------
 def updateMap():
     global blockList, zombieLife, winCount,findChest
@@ -162,12 +165,16 @@ def updateMap():
     clock.tick(60)
 
 def makeZombie(destination,count):
-    global blockNum, zombiePath, zombieLife, zombiePos, explode, chiliList
-    if blockNum!=len(blockList):#calculate shortestPath again if walls# change
-        blockNum=len(blockList)
-        Asearch=Astar(End,destination,blockList,mazeSize)
+    global zombiePath, zombieLife, zombiePos, explode, chiliList,mapChanged,chiliNum,shovelNum,brickNum,loseGame
+    if mapChanged:#calculate shortestPath again if walls# change
+        mapChanged=False
+        Asearch=AStar.Astar(End,destination,blockList,mazeSize)
         print('*zombie is finding a new path')
-        Asearch.nextStep()
+        while Asearch.nextStep()==None:
+            print('*there is no path from entrance to exit, try to create one')
+            pygame.time.delay(2000)
+            Asearch=AStar.Astar(End,destination,blockList,mazeSize)
+        else: print('*a path is found')
         zombiePath=Asearch.shortestPath
     moveSpeed=700
     eatSpeed=1900
@@ -185,6 +192,8 @@ def makeZombie(destination,count):
                 for p in chiliList:
                     if nextStp==p[0:2]:
                         p[4]='die'
+        while nextStp in blockList and zombieLife>0:#wall blocks
+            pygame.time.delay(moveSpeed)
         zombiePos=nextStp#move
         pygame.time.delay(moveSpeed)
     if explode:#explode
@@ -192,17 +201,26 @@ def makeZombie(destination,count):
         explode=False
         for x in range(-1,2):
             for y in range(-1,2):
-                if 0<x+zombiePos[0]<mazeSize[0]-1 and 0<x+zombiePos[1]<mazeSize[1]-1:#wall cannot be removed
+                if 0<x+zombiePos[0]<mazeSize[0]-1 and 0<y+zombiePos[1]<mazeSize[1]-1:#wall cannot be removed
                     if [x+zombiePos[0],y+zombiePos[1]] in blockList:#remove walls
                         blockList.remove([x+zombiePos[0],y+zombiePos[1]])
+                        mapChanged=True
                     elif [x+zombiePos[0],y+zombiePos[1]] in [p[0:2] for p in chiliList]:#remove chilies
                         for p in chiliList:
                             if [x+zombiePos[0],y+zombiePos[1]]==p[0:2]:
                                 p[4]='die'
+    if zombieLife>0:
+        if chiliNum>0: chiliNum-=1
+        if shovelNum>0: shovelNum-=1
+        if brickNum>0: brickNum-=1
+        if chiliNum==0 and shovelNum==0 and brickNum==0:
+            print('lose game')
+            loseGame=True
+            exit()
     makeZombie(destination,count+1)#new zombie
 
 def makeChili():
-    global zombieLife,shovelNum,chiliNum, explode
+    global zombieLife,shovelNum,chiliNum,brickNum, explode
     attackSpeed=1.8#second
     firetime=0.3
     damage=1
@@ -221,10 +239,15 @@ def makeChili():
             elif cc[3]=='attacking':
                 if time.time()-cc[2]>=firetime:
                     zombieLife-=damage
-                    if zombieLife==0:
-                        if random.randint(1, 3)==1:#reward
-                            shovelNum+=2
-                        else: chiliNum+=2
+                    if zombieLife==0:#rewards
+                        shovelNum+=1
+                        chiliNum+=1
+                        brickNum+=1
+                        if random.randint(1, 3)==1:
+                            shovelNum+=1
+                        elif random.randint(1, 2)==1:
+                            chiliNum+=1
+                        else: brickNum+=1
                         if random.randint(1, 3)==1:#33% chance explode
                             explode=True
                     attackList.remove(cc)
@@ -239,6 +262,7 @@ monsterThread.setDaemon(True)
 monsterThread.start()
 #pygame main loop
 while True:
+    if loseGame: exit()
     for event in pygame.event.get():
         if event.type == QUIT:#quite all threading and exit
             exit()
@@ -260,6 +284,7 @@ while True:
                         if shovelUse:#use shove to remove block
                             if [x,y] in blockList:
                                 blockList.remove([x,y])
+                                mapChanged=True
                             elif [x,y] in [p[0:2] for p in chiliList]:
                                 for p in chiliList:
                                     if [x,y]==p[0:2]:
@@ -272,6 +297,7 @@ while True:
                         elif brickUse:#use brick to set block
                             if [x,y] not in blockList:
                                 blockList.append([x,y])
+                                mapChanged=True
                                 brickNum-=1
                                 if brickNum==0:
                                     brickUse=False
