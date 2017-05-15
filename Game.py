@@ -13,7 +13,7 @@ Green=[0,255,0]
 Turquoise=[0,245,255]
 #randomly load and analyze a maze image
 filename=random.randint(1, 4)
-filename='img/maze' + str(filename)+'.png'
+filename='img/maze' + str(filename)+'.PNG'
 mazeSize,Start,End,blockList=MazeAnalyse.analyzeMaze(filename)
 if type(mazeSize) is str:
     print(mazeSize)
@@ -33,17 +33,17 @@ font = pygame.font.SysFont(None, MBsize//2)
 screen = pygame.display.set_mode(windowSize, 0, 32)
 pygame.display.set_caption("Maze Defense")
 #load images
-Zombie=pygame.image.load('img/zombie.png')
-Wall=pygame.image.load('img/wall.png')
-Road=pygame.image.load('img/road.png')
-Chest=pygame.image.load('img/chest.png')
-Chili=pygame.image.load('img/chili.png')
-Chili0=pygame.image.load('img/chili0.png')
-Shovel=pygame.image.load('img/shovel.png')
-Brick=pygame.image.load('img/brick.png')
-Attack=pygame.image.load('img/attack.png')
-Damaged=pygame.image.load('img/damaged.png')
-Bomb=pygame.image.load('img/bomb.png')
+Zombie=pygame.image.load('img/zombie.PNG')
+Wall=pygame.image.load('img/wall.PNG')
+Road=pygame.image.load('img/road.PNG')
+Chest=pygame.image.load('img/chest.PNG')
+Chili=pygame.image.load('img/chili.PNG')
+Chili0=pygame.image.load('img/chili0.PNG')
+Shovel=pygame.image.load('img/shovel.PNG')
+Brick=pygame.image.load('img/brick.PNG')
+Attack=pygame.image.load('img/attack.PNG')
+Damaged=pygame.image.load('img/damaged.PNG')
+Bomb=pygame.image.load('img/bomb.PNG')
 Win=[]
 WinNum=92
 winCount=0
